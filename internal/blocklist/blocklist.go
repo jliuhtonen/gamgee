@@ -3,13 +3,12 @@ package blocklist
 import (
 	"io"
 	"net/http"
-	"slices"
 	"strings"
 )
 
 const domainList = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.mini-onlydomains.txt"
 
-func FetchList() (*BlockList, error) {
+func FetchList() (*DomainList, error) {
 	response, err := http.Get(domainList)
 	if err != nil {
 		return nil, err
@@ -20,24 +19,15 @@ func FetchList() (*BlockList, error) {
 		return nil, err
 	}
 
-	blockList := parseList(string(responseContent))
+	parsedDomains := parseList(string(responseContent))
+	domainList := New(parsedDomains)
 
-	return &blockList, nil
+	return domainList, nil
 }
 
-type BlockList struct {
-	items []string
-}
-
-func (bl *BlockList) Contains(domain string) bool {
-	domain = strings.ToLower(domain)
-	return slices.ContainsFunc(bl.items, func(i string) bool {
-		return domain == i || strings.HasSuffix(domain, "."+i)
-	})
-}
-
-func parseList(listStr string) BlockList {
+func parseList(listStr string) []string {
 	var items []string
+
 	for _, line := range strings.Split(listStr, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -45,5 +35,6 @@ func parseList(listStr string) BlockList {
 		}
 		items = append(items, strings.ToLower(line))
 	}
-	return BlockList{items: items}
+
+	return items
 }
