@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	"codeberg.org/miekg/dns"
 	"github.com/jliuhtonen/warden/internal/blocklist"
-	"github.com/miekg/dns"
 )
 
 func main() {
@@ -21,32 +22,28 @@ func main() {
 		panic(err)
 	}
 
-	client := &dns.Client{
-		Net: "udp",
-	}
+	client := dns.NewClient()
 
-	conn, err := client.Dial(upstreamAddr)
-	if err != nil {
-		panic(err)
-	}
-
-	dns.ListenAndServe(":53530", "udp", dns.HandlerFunc(func(w dns.ResponseWriter, msg *dns.Msg) {
+	dns.ListenAndServe(":53530", "udp", dns.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, msg *dns.Msg) {
 		fmt.Println(msg.Question)
 		for _, q := range msg.Question {
-			domain, _ := strings.CutSuffix(q.Name, ".")
+			domain, _ := strings.CutSuffix(q.Header().Name, ".")
 			if blockList.Contains(domain) {
 				fmt.Println("BLOCKING ", domain)
-				reply := msg.SetReply(msg)
+				reply := msg.Copy()
+				reply.Response = true
 				reply.Rcode = dns.RcodeNameError
-				w.WriteMsg(reply)
+				reply.Data = nil
+				reply.WriteTo(w)
 				return
 			}
 		}
 		fmt.Println("Received message" + msg.String())
-		respMsg, _, err := client.ExchangeWithConn(msg, conn)
+		respMsg, _, err := client.Exchange(ctx, msg, "udp", upstreamAddr)
 		if err != nil {
 			fmt.Println("ERROR" + err.Error())
+			return
 		}
-		w.WriteMsg(respMsg)
+		respMsg.WriteTo(w)
 	}))
 }
