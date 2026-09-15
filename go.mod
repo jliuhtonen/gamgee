@@ -1,4 +1,4 @@
-module github.com/jliuhtonen/warden
+module github.com/jliuhtonen/gamgee
 
 go 1.27.1
 

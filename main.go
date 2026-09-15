@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"codeberg.org/miekg/dns"
-	"github.com/jliuhtonen/warden/internal/blocklist"
+	"github.com/jliuhtonen/gamgee/internal/blocklist"
 )
 
 func main() {
