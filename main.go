@@ -3,20 +3,23 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
+	"strconv"
 	"strings"
 
 	"codeberg.org/miekg/dns"
 	"github.com/jliuhtonen/gamgee/internal/blocklist"
+	"github.com/jliuhtonen/gamgee/internal/config"
 )
 
 func main() {
-	args := os.Args[1:]
-	if len(args) == 0 {
-		fmt.Println("Usage: warden <upstream dns address>")
+	config, err := config.ReadConfig()
+	listenAddr := ":" + strconv.Itoa(config.Port)
+
+	if err != nil {
+		panic(err)
 	}
-	upstreamAddr := args[0]
-	blockList, err := blocklist.FetchList()
+
+	blockList, err := blocklist.FetchList(config.BlocklistURIs[0])
 
 	if err != nil {
 		panic(err)
@@ -24,7 +27,7 @@ func main() {
 
 	client := dns.NewClient()
 
-	dns.ListenAndServe(":53530", "udp", dns.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, msg *dns.Msg) {
+	dns.ListenAndServe(listenAddr, "udp", dns.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, msg *dns.Msg) {
 		fmt.Println(msg.Question)
 		for _, q := range msg.Question {
 			domain, _ := strings.CutSuffix(q.Header().Name, ".")
@@ -39,7 +42,7 @@ func main() {
 			}
 		}
 		fmt.Println("Received message" + msg.String())
-		respMsg, _, err := client.Exchange(ctx, msg, "udp", upstreamAddr)
+		respMsg, _, err := client.Exchange(ctx, msg, "udp", config.UpstreamDns)
 		if err != nil {
 			fmt.Println("ERROR" + err.Error())
 			return

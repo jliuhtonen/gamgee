@@ -6,10 +6,8 @@ import (
 	"strings"
 )
 
-const domainList = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/wildcard/pro.mini-onlydomains.txt"
-
-func FetchList() (*DomainList, error) {
-	response, err := http.Get(domainList)
+func FetchList(domainListURI string) (*DomainList, error) {
+	response, err := http.Get(domainListURI)
 	if err != nil {
 		return nil, err
 	}
