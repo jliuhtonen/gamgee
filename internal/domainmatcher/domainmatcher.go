@@ -1,4 +1,4 @@
-package blocklist
+package domainmatcher
 
 import (
 	"github.com/hashicorp/go-immutable-radix/v2"
@@ -6,30 +6,30 @@ import (
 	"strings"
 )
 
-type domainListValue struct{}
+type domainMatcherValue struct{}
 
-type DomainList struct {
-	domainLookupTree *iradix.Tree[domainListValue]
+type DomainMatcher struct {
+	domainLookupTree *iradix.Tree[domainMatcherValue]
 }
 
-func (dl *DomainList) Contains(domain string) bool {
+func (dl *DomainMatcher) Contains(domain string) bool {
 	key := reverseDomainKey(domain)
 	_, _, ok := dl.domainLookupTree.Root().LongestPrefix(key)
 
 	return ok
 }
 
-func New(domains []string) *DomainList {
-	tree := insertDomainsToTree(iradix.New[domainListValue](), domains)
-	return &DomainList{
+func New(domains []string) *DomainMatcher {
+	tree := insertDomainsToTree(iradix.New[domainMatcherValue](), domains)
+	return &DomainMatcher{
 		domainLookupTree: tree,
 	}
 }
 
-func insertDomainsToTree(tree *iradix.Tree[domainListValue], domains []string) *iradix.Tree[domainListValue] {
+func insertDomainsToTree(tree *iradix.Tree[domainMatcherValue], domains []string) *iradix.Tree[domainMatcherValue] {
 	tx := tree.Txn()
 	for _, domain := range domains {
-		tx.Insert(reverseDomainKey(strings.ToLower(domain)), domainListValue{})
+		tx.Insert(reverseDomainKey(strings.ToLower(domain)), domainMatcherValue{})
 	}
 	return tx.Commit()
 }

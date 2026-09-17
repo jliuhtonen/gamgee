@@ -4,9 +4,11 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/jliuhtonen/gamgee/internal/domainmatcher"
 )
 
-func FetchList(domainListURI string) (*DomainList, error) {
+func FetchList(domainListURI string) (*domainmatcher.DomainMatcher, error) {
 	response, err := http.Get(domainListURI)
 	if err != nil {
 		return nil, err
@@ -18,7 +20,7 @@ func FetchList(domainListURI string) (*DomainList, error) {
 	}
 
 	parsedDomains := parseList(string(responseContent))
-	domainList := New(parsedDomains)
+	domainList := domainmatcher.New(parsedDomains)
 
 	return domainList, nil
 }
