@@ -19,7 +19,7 @@ func main() {
 		panic(err)
 	}
 
-	blockList, err := blocklist.FetchList(config.BlocklistURIs[0])
+	blockList, err := blocklist.FetchLists(config.BlocklistURIs)
 
 	if err != nil {
 		panic(err)

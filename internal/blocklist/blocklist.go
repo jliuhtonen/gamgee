@@ -1,14 +1,37 @@
 package blocklist
 
 import (
+	"context"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/jliuhtonen/gamgee/internal/domainmatcher"
+	"golang.org/x/sync/errgroup"
 )
 
-func FetchList(domainListURI string) (*domainmatcher.DomainMatcher, error) {
+func FetchLists(uris []string) (*domainmatcher.DomainMatcher, error) {
+	results := make([][]string, len(uris))
+
+	grp, _ := errgroup.WithContext(context.Background())
+
+	for i, uri := range uris {
+		grp.Go(func() error {
+			result, err := fetchList(uri)
+			results[i] = result
+			return err
+		})
+	}
+
+	if err := grp.Wait(); err != nil {
+		return nil, err
+	}
+
+	return domainmatcher.New(slices.Concat(results...)), nil
+}
+
+func fetchList(domainListURI string) ([]string, error) {
 	response, err := http.Get(domainListURI)
 	if err != nil {
 		return nil, err
@@ -20,9 +43,8 @@ func FetchList(domainListURI string) (*domainmatcher.DomainMatcher, error) {
 	}
 
 	parsedDomains := parseList(string(responseContent))
-	domainList := domainmatcher.New(parsedDomains)
 
-	return domainList, nil
+	return parsedDomains, nil
 }
 
 func parseList(listStr string) []string {
