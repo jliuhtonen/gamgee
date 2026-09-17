@@ -26,12 +26,6 @@ func New(domains []string) *DomainMatcher {
 	}
 }
 
-func (dl *DomainMatcher) Append(domains []string) *DomainMatcher {
-	return &DomainMatcher{
-		domainLookupTree: insertDomainsToTree(dl.domainLookupTree, domains),
-	}
-}
-
 func insertDomainsToTree(tree *iradix.Tree[domainMatcherValue], domains []string) *iradix.Tree[domainMatcherValue] {
 	tx := tree.Txn()
 	for _, domain := range domains {
