@@ -11,6 +11,14 @@ import (
 	"github.com/jliuhtonen/gamgee/internal/config"
 )
 
+func replyWithError(w dns.ResponseWriter, msg *dns.Msg, rcode uint16) {
+	reply := msg.Copy()
+	reply.Response = true
+	reply.Rcode = rcode
+	reply.Data = nil
+	reply.WriteTo(w)
+}
+
 func main() {
 	config, err := config.ReadConfig()
 
@@ -30,22 +38,27 @@ func main() {
 
 	dns.ListenAndServe(listenAddr, "udp", dns.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, msg *dns.Msg) {
 		fmt.Println(msg.Question)
-		for _, q := range msg.Question {
-			domain, _ := strings.CutSuffix(q.Header().Name, ".")
-			if blockList.Contains(domain) {
-				fmt.Println("BLOCKING ", domain)
-				reply := msg.Copy()
-				reply.Response = true
-				reply.Rcode = dns.RcodeNameError
-				reply.Data = nil
-				reply.WriteTo(w)
-				return
-			}
+		if msg.Opcode != dns.OpcodeQuery {
+			replyWithError(w, msg, dns.RcodeNotImplemented)
+			return
 		}
-		fmt.Println("Received message" + msg.String())
+
+		if len(msg.Question) != 1 {
+			replyWithError(w, msg, dns.RcodeFormatError)
+			return
+		}
+
+		q := msg.Question[0]
+
+		domain, _ := strings.CutSuffix(q.Header().Name, ".")
+		if blockList.Contains(domain) {
+			replyWithError(w, msg, dns.RcodeNameError)
+			return
+		}
+
 		respMsg, _, err := client.Exchange(ctx, msg, "udp", config.UpstreamDns)
 		if err != nil {
-			fmt.Println("ERROR" + err.Error())
+			replyWithError(w, msg, dns.RcodeServerFailure)
 			return
 		}
 		respMsg.WriteTo(w)
