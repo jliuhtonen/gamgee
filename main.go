@@ -13,7 +13,6 @@ import (
 
 func main() {
 	config, err := config.ReadConfig()
-	listenAddr := ":" + strconv.Itoa(config.Port)
 
 	if err != nil {
 		panic(err)
@@ -24,6 +23,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	listenAddr := ":" + strconv.Itoa(config.Port)
 
 	client := dns.NewClient()
 
