@@ -19,6 +19,13 @@ func replyWithError(w dns.ResponseWriter, msg *dns.Msg, rcode uint16) {
 	reply.WriteTo(w)
 }
 
+func cacheKey(rr *dns.RR) string {
+	header := (*rr).Header()
+	return strings.ToLower(header.Name) + "|" +
+		strconv.Itoa(int(dns.RRToType(*rr))) + "|" +
+		strconv.Itoa(int(header.Class))
+}
+
 func main() {
 	config, err := config.ReadConfig()
 
@@ -37,7 +44,6 @@ func main() {
 	client := dns.NewClient()
 
 	dns.ListenAndServe(listenAddr, "udp", dns.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, msg *dns.Msg) {
-		fmt.Println(msg.Question)
 		if msg.Opcode != dns.OpcodeQuery {
 			replyWithError(w, msg, dns.RcodeNotImplemented)
 			return
@@ -49,6 +55,8 @@ func main() {
 		}
 
 		q := msg.Question[0]
+		key := cacheKey(&q)
+		fmt.Println("Cache key", key)
 
 		domain, _ := strings.CutSuffix(q.Header().Name, ".")
 		if blockList.Contains(domain) {
